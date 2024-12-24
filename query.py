@@ -167,15 +167,15 @@ def run(requirements, groups=[]):
     for deviceName, ids in sorted(ids_by_deviceName.items()):
         supported = len(ids.supported)
         total = supported + len(ids.unsupported)
-        if supported / total >= 0.9:
+        if supported / total >= 0.8:
             result_over90 += '  + {} ({} of {})\n'.format(deviceName,
                                                           supported, total)
         elif supported:
             result_under90 += '  ? {} ({} of {})\n'.format(deviceName,
                                                            supported, total)
 
-    result += 'At least 90% of each of the following was still supported:\n' + result_over90
-    result += 'At least one, but under 90% of each of the following was still supported:\n' + result_under90
+    result += 'At least 80% of each of the following was still supported:\n' + result_over90
+    result += 'At least one, but under 80% of each of the following was still supported:\n' + result_under90
 
     if len(device_groups):
         result += '\n\nGroupings of {} supported devices\n'.format(
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 
     def add_min_limit(name, value):
         add_rq('{} >= {}'.format(name, value),
-               lambda info: info.limits[name] >= value)
+               lambda info: (name in info.limits) and info.limits[name] >= value)
 
     def add_max_limit(name, value):
         add_rq('{} <= {}'.format(name, value),
@@ -229,6 +229,10 @@ if __name__ == '__main__':
     def add_bits_limit(name, bits):
         add_rq('{} has bits 0b{:b}'.format(name, bits),
                lambda info: (info.limits[name] & bits) == bits)
+
+    def add_min_property(name, value):
+        add_rq('{} >= {}'.format(name, value),
+               lambda info: (name in info.properties) and int(info.properties[name]) >= value)
 
     def add_min_opt_property(name, value):
         add_rq('{} >= {}'.format(name, value),
@@ -372,6 +376,34 @@ if __name__ == '__main__':
 
     add_min_opt_property('maxMemoryAllocationSize', 268435456)
     add_min_opt_property('maxBufferSize', 268435456)
+
+    # Bindless
+    add_rq('descriptorBindingPartiallyBound',
+           lambda info: 'descriptorBindingPartiallyBound' in info.features)
+    add_rq('descriptorBindingSampledImageUpdateAfterBind',
+           lambda info: 'descriptorBindingSampledImageUpdateAfterBind' in info.features)
+    add_rq('descriptorBindingStorageBufferUpdateAfterBind',
+           lambda info: 'descriptorBindingStorageBufferUpdateAfterBind' in info.features)
+    add_rq('descriptorBindingStorageImageUpdateAfterBind',
+           lambda info: 'descriptorBindingStorageImageUpdateAfterBind' in info.features)
+
+    add_min_property('maxPerStageDescriptorUpdateAfterBindSamplers', value=500_000)
+    add_min_property('maxPerStageDescriptorUpdateAfterBindSampledImages', value=500_000)
+    add_min_property('maxPerStageDescriptorUpdateAfterBindStorageBuffers', value=500_000)
+    add_min_property('maxPerStageDescriptorUpdateAfterBindStorageImages', value=500_000)
+
+    add_rq('shaderSampledImageArrayNonUniformIndexing',
+           lambda info: 'shaderSampledImageArrayNonUniformIndexing' in info.features)
+    add_rq('shaderStorageBufferArrayNonUniformIndexing',
+           lambda info: 'shaderStorageBufferArrayNonUniformIndexing' in info.features)
+    add_rq('shaderStorageImageArrayNonUniformIndexing',
+           lambda info: 'shaderStorageImageArrayNonUniformIndexing' in info.features)
+    
+    # add_rq('descriptorBindingUniformBufferUpdateAfterBind',
+    #        lambda info: 'descriptorBindingUniformBufferUpdateAfterBind' in info.features)
+    # add_min_property('maxPerStageDescriptorUpdateAfterBindUniformBuffers', value=500_000)
+    # add_rq('shaderUniformBufferArrayNonUniformIndexing',
+    #        lambda info: 'shaderUniformBufferArrayNonUniformIndexing' in info.features)
 
     # Additional requirements?
 
